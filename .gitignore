@@ -1,0 +1,3 @@
+node_modules/
+Billing/*.pdf
+.env
