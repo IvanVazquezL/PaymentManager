@@ -1,26 +1,34 @@
 import { readFile } from "fs";
 import { PdfReader } from "pdfreader";
+import {
+    readInput
+} from "./inquirer.js";
+import BillService from "../services/BillService.js";
 
 class PaymentManager {
     pdfToText = [];
+    username = '';
+    token = '';
 
-    constructor() {
+    constructor(username, token) {
         this.pdfToText = [];
+        this.username = username;
+        this.token = token;
     }
 
-    pdfReader(path) {
+    async pdfReader(path) {
         readFile(path, (err, pdfBuffer) => {
             // pdfBuffer contains the file content
           
-            new PdfReader().parseBuffer(pdfBuffer, (err, item) => {
+            new PdfReader().parseBuffer(pdfBuffer, async (err, item) => {
               if (err) console.error("error:", err);
-              else if (!item) this.extractDataFromText();
+              else if (!item) await this.extractDataFromText();
               else if (item.text) this.pdfToText.push(item.text);
             });
           });
     }
     
-    extractDataFromText() {    
+    async extractDataFromText() {    
         const KEYWORDS = [
             "Fecha:",
             "Sueldo",
@@ -85,6 +93,53 @@ class PaymentManager {
             }   
         }
         console.log(JSON.stringify(obj, null, 2))
+        const answer = await readInput('Save bill? (y/n): ');
+
+        if (answer === 'y') {
+            const billService = new BillService();
+
+            console.log('jello');
+
+            const numericFields = {
+                "Sueldo": "sueldo",
+                "I.M.S.S.": "imss",
+                "Premio Asistencia": "premioAsistencia",
+                "Fondo Ahorro Empleado": "fondoAhorroEmpleado",
+                "Premio Puntualidad": "premioPuntualidad",
+                "I.S.R.": "isr",
+                "Fondo Ahorro Empresa": "fondoAhorroEmpresa",
+                "SGMM": "sggm",
+                "Fondo Ahorro Trabajador": "fondoAhorroTrabajador",
+                "Subtotal": "subtotal",
+                "Descuentos": "descuentos",
+                "Retenciones": "retenciones",
+                "Total": "total",
+                "Neto del Recibo": "netoDelRecibo",
+                "Total percepcion mas otros pagos": "totalPercepcionMasOtrosPagos" 
+            }
+
+            const bill = {
+                fechaDePagoIdentifier: obj['Fecha de Pago'],
+                nombre: obj['Nombre'],
+                tipoDeRecibo: obj['Tipo de Recibo'],
+                fechaDePago: new Date(obj['Fecha de Pago']),
+                inicioDelPeriodo: new Date(obj['Inicio del Periodo']),
+                finDelPeriodo: new Date(obj['Fin del Periodo']),
+                username: this.username
+            };
+
+            for (const [key, value] of Object.entries(obj)) {
+                if (key in numericFields) {
+                  bill[numericFields[key]] = parseFloat(value.replace(/,/g, ''));
+                }
+            }
+
+            console.log(JSON.stringify(bill));
+
+           const data = await billService.createBill(bill, this.token);
+           console.log(data);
+        }
+
     }
 }
 

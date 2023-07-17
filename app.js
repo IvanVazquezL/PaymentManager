@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
 import {
   header,
   readInput,
@@ -25,7 +24,7 @@ async function main() {
   }
 
   let opt = ''
-  const paymentManager = new PaymentManager();
+  const paymentManager = new PaymentManager(username, data.token);
 
   do {
     opt = await menu();
@@ -33,7 +32,7 @@ async function main() {
     switch (opt) {
       case '1':
         const path = await readInput('Give the path of the pdf: ');
-        paymentManager.pdfReader(path);
+        await paymentManager.pdfReader(path);
         break;    
       default:
         break;
